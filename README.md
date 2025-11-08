@@ -104,6 +104,7 @@ Before you begin, you'll need:
    - `master_files/merchant_dictionary.xlsx`
    - `logs/processing_log.txt`
 
+
 ### Step 5: Add Your Bank Statements
 
 1. **Download PDF statements** from your bank(s) and credit card provider(s)
@@ -335,6 +336,11 @@ Financial Advisor/
 
 ## Troubleshooting
 
+### Claude will fail to create .xlsx files using Filesystem Tool and creates CSV files instead
+   - Copy setup_instructions.txt and create_master_files.py into 'master_files' directory
+   - Follow instructions: run script in command line (You may need to install openpyxl)
+   - Manually delete CSV files that were created
+
 ### "Claude can't access my files"
 - **Solution**: Check that File System integration is enabled in Claude Desktop settings
 - Verify the folder path in Settings → Developer → Integrations → File System matches your base path
@@ -368,7 +374,7 @@ Financial Advisor/
 
 ### Changing Categories
 
-Edit the category list in `FINANCIAL_ADVISOR.md` (search for "Category Framework") to match your preferences. The default categories are:
+Edit the category list in `FINANCIAL_ADVISOR.md` (search for "Category Framework") and in `create_master_files.py` to match your preferences. The default categories are:
 - Housing
 - Transportation
 - Food & Dining

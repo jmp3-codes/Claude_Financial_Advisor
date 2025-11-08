@@ -46,16 +46,26 @@ When user requests initial setup OR when master files don't exist:
 
 1. **Confirm base path**: "I'll set up your financial structure at `/Users/jackpage/Documents/Coding/Claude/Financial Advisor/` - is this correct?"
 2. **Wait for user confirmation** before proceeding
-3. **Check existing structure**: Use bash to scan for existing folders and files
-4. **Create missing directories**: Set up any folders that don't exist yet
-5. **Initialize master files**:
+3. **Check existing structure**: Use `bash_tool` with `ls -la` to scan for existing folders and check ownership
+4. **Create missing directories with proper permissions**:
+   ```bash
+   # Use mkdir -p to create directories (ensures user ownership, not root)
+   mkdir -p "/Users/jackpage/Documents/Coding/Claude/Financial Advisor/statements"
+   mkdir -p "/Users/jackpage/Documents/Coding/Claude/Financial Advisor/master_files"
+   mkdir -p "/Users/jackpage/Documents/Coding/Claude/Financial Advisor/monthly_reports"
+   mkdir -p "/Users/jackpage/Documents/Coding/Claude/Financial Advisor/annual_reports"
+   mkdir -p "/Users/jackpage/Documents/Coding/Claude/Financial Advisor/logs"
+   ```
+5. **Verify ownership**: Check that folders are owned by the user (not root) using `ls -la`
+6. **Initialize master files using create_file tool** (this ensures proper permissions):
    - Create empty `merchant_dictionary.xlsx` template if it doesn't exist
    - Create `processing_log.txt` with header if it doesn't exist  
-   - Create year-specific `master_transactions_YYYY.xlsx` for current year if needed
-6. **Create month folders**: Generate `statements/YYYY-MM/` folders for current year
-7. **Report completion**: 
+   - Create year-specific `master_transactions_YYYY.xlsx` for current year using Python/openpyxl
+7. **Create month folders for current year**: Generate `statements/YYYY-MM/` folders
+8. **Test accessibility**: Verify files can be read/written with current user permissions
+9. **Report completion**: 
    ```
-   "✓ Structure created successfully!
+   "✅ Structure created successfully!
    
    Next steps:
    1. Add your PDF bank statements to the appropriate statements/YYYY-MM/ folders
@@ -65,8 +75,13 @@ When user requests initial setup OR when master files don't exist:
    - statements/2025-01/
    - statements/2025-02/
    - statements/2025-10/
-   [etc.]"
+   [etc.]
+   
+   You should now be able to see these folders in Finder at:
+   /Users/jackpage/Documents/Coding/Claude/Financial Advisor/"
    ```
+
+**CRITICAL**: Always use bash_tool with mkdir -p for directory creation to ensure proper user ownership. Never use methods that might create root-owned directories.
 
 ### File Access Rules
 - **NEVER modify files in `instructions/` folder** - these are project configuration files
@@ -75,6 +90,37 @@ When user requests initial setup OR when master files don't exist:
 - **CHECK file locks**: Before opening Excel files for writing, check they're not already open
 - **VERIFY file integrity**: Test that master files load correctly before modifying
 - **CREATE backups**: Before major updates to master files, consider creating timestamped backups
+- **ENSURE proper ownership**: All folders and files must be owned by the user, not root
+
+### Troubleshooting: Folders Not Visible in Finder
+
+**Problem**: After running setup, folders don't appear in Finder or terminal shows permission denied.
+
+**Cause**: Directories were created with root ownership instead of user ownership.
+
+**Solution**:
+1. Check ownership:
+   ```bash
+   ls -la "/Users/jackpage/Documents/Coding/Claude/Financial Advisor/"
+   ```
+2. If folders are owned by root, fix ownership:
+   ```bash
+   # DO NOT USE - this requires sudo
+   # Instead, delete and recreate properly
+   ```
+3. Delete root-owned folders (if they exist):
+   ```bash
+   # Only delete the Financial Advisor folder if it's causing issues
+   rm -rf "/Users/jackpage/Documents/Coding/Claude/Financial Advisor/"
+   ```
+4. Recreate with proper ownership using mkdir -p (no sudo):
+   ```bash
+   mkdir -p "/Users/jackpage/Documents/Coding/Claude/Financial Advisor/statements"
+   mkdir -p "/Users/jackpage/Documents/Coding/Claude/Financial Advisor/master_files"
+   # etc.
+   ```
+
+**Prevention**: Always use `bash_tool` with `mkdir -p` for directory creation, never use commands that require elevated privileges.
 
 ### File Lock Warning
 Before modifying any Excel files, check if they're currently open:

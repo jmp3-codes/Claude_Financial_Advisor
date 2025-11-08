@@ -339,6 +339,12 @@ Financial Advisor/
 - **Solution**: Check that File System integration is enabled in Claude Desktop settings
 - Verify the folder path in Settings → Developer → Integrations → File System matches your base path
 
+### "Folders created but not visible in Finder"
+- **Cause**: Claude used bash_tool instead of Filesystem tools in project context
+- **Solution**: Tell Claude to recreate using Filesystem:create_directory
+- **Important**: In Claude Projects, always use Filesystem tools (Filesystem:create_directory, Filesystem:write_file) for file operations, NOT bash_tool
+- bash_tool can create files/folders that are sandboxed and invisible in Finder when used in project contexts
+
 ### "PDF extraction failed"
 - **Cause**: PDF might be password-protected, corrupted, or in an unusual format
 - **Solution**: Try opening the PDF manually. If it opens, re-download from your bank. If password-protected, remove the password first.

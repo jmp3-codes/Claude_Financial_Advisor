@@ -1,23 +1,34 @@
 # Fix for "Folders Not Visible" Issue
 
 ## The Problem
-Claude created folders with root ownership, making them invisible in Finder and inaccessible to you.
+Claude used bash_tool to create folders, which in project contexts can create files/folders that aren't visible to the Filesystem tools or Finder due to permission sandboxing.
+
+## The Solution: Use Filesystem Tools, Not bash_tool
+
+The key insight: **In Claude Projects, use Filesystem tools for ALL file operations.**
+
+- ✅ Filesystem:create_directory - Creates folders visible in Finder
+- ✅ Filesystem:write_file - Creates files visible in Finder
+- ❌ bash_tool with mkdir - May create invisible folders in project context
+- ❌ bash_tool with touch/echo - May create invisible files in project context
 
 ## Quick Fix - Option 1: Let Claude Recreate (Recommended)
 
 In your Financial Advisor project, tell Claude:
 
 ```
-Please delete the Financial Advisor folder and recreate it with proper user ownership. 
+Please delete the Financial Advisor folder using bash_tool, then recreate it using Filesystem:create_directory. 
 
-Use these exact commands:
-1. rm -rf "/Users/jackpage/Documents/Coding/Claude/Financial Advisor"
-2. mkdir -p "/Users/jackpage/Documents/Coding/Claude/Financial Advisor/statements"
-3. mkdir -p "/Users/jackpage/Documents/Coding/Claude/Financial Advisor/master_files"
-4. mkdir -p "/Users/jackpage/Documents/Coding/Claude/Financial Advisor/monthly_reports"
-5. mkdir -p "/Users/jackpage/Documents/Coding/Claude/Financial Advisor/annual_reports"
-6. mkdir -p "/Users/jackpage/Documents/Coding/Claude/Financial Advisor/logs"
-7. Verify ownership with: ls -la "/Users/jackpage/Documents/Coding/Claude/Financial Advisor"
+Steps:
+1. Use bash_tool to delete: rm -rf "/Users/jackpage/Documents/Coding/Claude/Financial Advisor"
+2. Use Filesystem:create_directory to create each folder:
+   - /Users/jackpage/Documents/Coding/Claude/Financial Advisor/
+   - /Users/jackpage/Documents/Coding/Claude/Financial Advisor/statements
+   - /Users/jackpage/Documents/Coding/Claude/Financial Advisor/master_files
+   - /Users/jackpage/Documents/Coding/Claude/Financial Advisor/monthly_reports
+   - /Users/jackpage/Documents/Coding/Claude/Financial Advisor/annual_reports
+   - /Users/jackpage/Documents/Coding/Claude/Financial Advisor/logs
+3. Verify with Filesystem:list_directory
 ```
 
 ## Quick Fix - Option 2: Manual Terminal Commands
@@ -27,51 +38,36 @@ Open Terminal and run:
 ```bash
 # Remove the problematic folder
 rm -rf "/Users/jackpage/Documents/Coding/Claude/Financial Advisor"
-
-# Recreate with proper ownership (no sudo needed)
-mkdir -p "/Users/jackpage/Documents/Coding/Claude/Financial Advisor/statements"
-mkdir -p "/Users/jackpage/Documents/Coding/Claude/Financial Advisor/master_files"
-mkdir -p "/Users/jackpage/Documents/Coding/Claude/Financial Advisor/monthly_reports"
-mkdir -p "/Users/jackpage/Documents/Coding/Claude/Financial Advisor/annual_reports"
-mkdir -p "/Users/jackpage/Documents/Coding/Claude/Financial Advisor/logs"
-
-# Create month folders for 2025
-mkdir -p "/Users/jackpage/Documents/Coding/Claude/Financial Advisor/statements/2025-"{01..12}
-
-# Verify it worked
-ls -la "/Users/jackpage/Documents/Coding/Claude/Financial Advisor"
 ```
 
-You should see folders owned by `jackpage` (you), not `root`.
-
-## Then in Claude Project:
-
+Then in Claude Project:
 ```
-Now please initialize the master files (merchant_dictionary.xlsx, processing_log.txt, and master_transactions_2025.xlsx) in the proper locations.
+Please create the Financial Advisor directory structure using Filesystem:create_directory for all folders.
 ```
 
 ## What Changed in the Instructions
 
 I've updated both PROJECT_INSTRUCTIONS.txt and FINANCIAL_ADVISOR.md to:
-1. ✅ Explicitly use `mkdir -p` via bash_tool (ensures user ownership)
-2. ✅ Verify ownership after creation
-3. ✅ Never use methods that might require sudo/root
-4. ✅ Added troubleshooting section for this exact issue
+1. ✅ Always use Filesystem:create_directory for folder creation
+2. ✅ Always use Filesystem:write_file for file creation
+3. ✅ Only use bash_tool for specific tasks like PDF extraction or data processing
+4. ✅ Added clear guidelines on when to use which tool
+5. ✅ Updated troubleshooting section with correct diagnosis
+
+## Key Takeaway
+
+**In Claude Projects:**
+- Filesystem tools → Files/folders visible in Finder ✅
+- bash_tool → Files/folders may be sandboxed and invisible ❌
+
+Always use the Filesystem tools for file management in project contexts!
 
 ## Verification
 
 After fixing, you should be able to:
 - See the folders in Finder at `/Users/jackpage/Documents/Coding/Claude/Financial Advisor`
-- Navigate to them in Terminal without permission errors
+- List them using Filesystem:list_directory in Claude
 - Add files to the folders normally
-
-## If Still Having Issues
-
-Check Claude Desktop's file system permissions:
-1. Claude Desktop → Settings → Developer → Integrations
-2. File System should be ON
-3. Should have `/Users/jackpage/Documents/Coding/Claude/Financial Advisor` listed
-4. Try removing and re-adding the path
 
 ## Updated Files
 

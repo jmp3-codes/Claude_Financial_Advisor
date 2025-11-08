@@ -46,23 +46,23 @@ When user requests initial setup OR when master files don't exist:
 
 1. **Confirm base path**: "I'll set up your financial structure at `/Users/jackpage/Documents/Coding/Claude/Financial Advisor/` - is this correct?"
 2. **Wait for user confirmation** before proceeding
-3. **Check existing structure**: Use `bash_tool` with `ls -la` to scan for existing folders and check ownership
-4. **Create missing directories with proper permissions**:
-   ```bash
-   # Use mkdir -p to create directories (ensures user ownership, not root)
-   mkdir -p "/Users/jackpage/Documents/Coding/Claude/Financial Advisor/statements"
-   mkdir -p "/Users/jackpage/Documents/Coding/Claude/Financial Advisor/master_files"
-   mkdir -p "/Users/jackpage/Documents/Coding/Claude/Financial Advisor/monthly_reports"
-   mkdir -p "/Users/jackpage/Documents/Coding/Claude/Financial Advisor/annual_reports"
-   mkdir -p "/Users/jackpage/Documents/Coding/Claude/Financial Advisor/logs"
+3. **Check existing structure**: Use `Filesystem:list_directory` to scan for existing folders
+4. **Create missing directories with Filesystem tool**:
    ```
-5. **Verify ownership**: Check that folders are owned by the user (not root) using `ls -la`
-6. **Initialize master files using create_file tool** (this ensures proper permissions):
-   - Create empty `merchant_dictionary.xlsx` template if it doesn't exist
-   - Create `processing_log.txt` with header if it doesn't exist  
-   - Create year-specific `master_transactions_YYYY.xlsx` for current year using Python/openpyxl
-7. **Create month folders for current year**: Generate `statements/YYYY-MM/` folders
-8. **Test accessibility**: Verify files can be read/written with current user permissions
+   Use Filesystem:create_directory for each folder:
+   - /Users/jackpage/Documents/Coding/Claude/Financial Advisor/statements
+   - /Users/jackpage/Documents/Coding/Claude/Financial Advisor/master_files
+   - /Users/jackpage/Documents/Coding/Claude/Financial Advisor/monthly_reports
+   - /Users/jackpage/Documents/Coding/Claude/Financial Advisor/annual_reports
+   - /Users/jackpage/Documents/Coding/Claude/Financial Advisor/logs
+   ```
+5. **Verify creation**: Use `Filesystem:list_directory` to confirm folders are created and accessible
+6. **Initialize master files using Filesystem:write_file**:
+   - Create empty `merchant_dictionary.xlsx` template using Python/openpyxl then write with Filesystem:write_file
+   - Create `processing_log.txt` with header using Filesystem:write_file
+   - Create year-specific `master_transactions_YYYY.xlsx` for current year using Python/openpyxl then write with Filesystem:write_file
+7. **Create month folders for current year**: Use Filesystem:create_directory for each `statements/YYYY-MM/` folder
+8. **Test accessibility**: Use Filesystem:list_directory to verify structure
 9. **Report completion**: 
    ```
    "✅ Structure created successfully!
@@ -81,46 +81,41 @@ When user requests initial setup OR when master files don't exist:
    /Users/jackpage/Documents/Coding/Claude/Financial Advisor/"
    ```
 
-**CRITICAL**: Always use bash_tool with mkdir -p for directory creation to ensure proper user ownership. Never use methods that might create root-owned directories.
+**CRITICAL**: Always use Filesystem tools (Filesystem:create_directory, Filesystem:write_file, Filesystem:read_file, etc.) for ALL file operations, NOT bash_tool. In project contexts, bash_tool can create files/folders that aren't visible in Finder due to permission sandboxing. The Filesystem tools ensure proper permissions and visibility.
 
 ### File Access Rules
 - **NEVER modify files in `instructions/` folder** - these are project configuration files
+- **ALWAYS use Filesystem tools** (Filesystem:read_file, Filesystem:write_file, Filesystem:create_directory, etc.) for ALL file operations
+- **NEVER use bash_tool** for file/folder creation in project contexts - it creates files that may not be visible in Finder
 - **ALWAYS read** from master_files before processing new data
 - **ALWAYS write back** to master_files after processing
 - **CHECK file locks**: Before opening Excel files for writing, check they're not already open
 - **VERIFY file integrity**: Test that master files load correctly before modifying
 - **CREATE backups**: Before major updates to master files, consider creating timestamped backups
-- **ENSURE proper ownership**: All folders and files must be owned by the user, not root
 
 ### Troubleshooting: Folders Not Visible in Finder
 
-**Problem**: After running setup, folders don't appear in Finder or terminal shows permission denied.
+**Problem**: After running setup, folders don't appear in Finder or in Filesystem:list_directory.
 
-**Cause**: Directories were created with root ownership instead of user ownership.
+**Cause**: bash_tool was used instead of Filesystem tools. In project contexts, bash_tool operations may not be visible to the Filesystem tools or to Finder due to permission sandboxing.
 
 **Solution**:
-1. Check ownership:
-   ```bash
-   ls -la "/Users/jackpage/Documents/Coding/Claude/Financial Advisor/"
+1. Delete any bash_tool-created folders:
    ```
-2. If folders are owned by root, fix ownership:
-   ```bash
-   # DO NOT USE - this requires sudo
-   # Instead, delete and recreate properly
+   Use bash_tool ONLY for deletion:
+   rm -rf "/Users/jackpage/Documents/Coding/Claude/Financial Advisor"
    ```
-3. Delete root-owned folders (if they exist):
-   ```bash
-   # Only delete the Financial Advisor folder if it's causing issues
-   rm -rf "/Users/jackpage/Documents/Coding/Claude/Financial Advisor/"
+2. Recreate using Filesystem:create_directory:
    ```
-4. Recreate with proper ownership using mkdir -p (no sudo):
-   ```bash
-   mkdir -p "/Users/jackpage/Documents/Coding/Claude/Financial Advisor/statements"
-   mkdir -p "/Users/jackpage/Documents/Coding/Claude/Financial Advisor/master_files"
-   # etc.
+   Use Filesystem:create_directory for:
+   - /Users/jackpage/Documents/Coding/Claude/Financial Advisor/
+   - /Users/jackpage/Documents/Coding/Claude/Financial Advisor/statements
+   - /Users/jackpage/Documents/Coding/Claude/Financial Advisor/master_files
+   - etc.
    ```
+3. Verify with Filesystem:list_directory - folders should now be visible
 
-**Prevention**: Always use `bash_tool` with `mkdir -p` for directory creation, never use commands that require elevated privileges.
+**Prevention**: Always use Filesystem tools for all file operations in project contexts. Only use bash_tool for specific operations like PDF extraction or data processing, never for file/folder creation.
 
 ### File Lock Warning
 Before modifying any Excel files, check if they're currently open:
@@ -560,6 +555,25 @@ Pivot table or formula-based summary:
 ✓ Single source of truth for all financial data
 
 ## Tools and File Creation
+
+### Tool Selection: Filesystem vs bash_tool
+
+**Use Filesystem tools for:**
+- ✅ Creating directories (Filesystem:create_directory)
+- ✅ Creating files (Filesystem:write_file)
+- ✅ Reading files (Filesystem:read_file)
+- ✅ Listing directories (Filesystem:list_directory)
+- ✅ Moving files (Filesystem:move_file)
+- ✅ Getting file info (Filesystem:get_file_info)
+- ✅ Searching for files (Filesystem:search_files)
+
+**Use bash_tool ONLY for:**
+- PDF text extraction (pdfplumber, PyPDF2)
+- Running Python scripts for data processing
+- Complex file operations not available in Filesystem tools
+- Installing packages (pip install)
+
+**CRITICAL**: In project contexts, bash_tool creates files/folders that may not be visible to Filesystem tools or Finder due to permission sandboxing. Always prefer Filesystem tools for file management.
 
 ### When to Create Files:
 - **Excel spreadsheets**: For transaction verification, budgets, detailed analysis

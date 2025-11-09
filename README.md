@@ -1,46 +1,142 @@
-# Claude Financial Advisor v2.0
+# Claude Financial Advisor v2.1 (Updated)
 
 A privacy-first personal finance management system powered by Claude AI that analyzes bank statements, categorizes spending, and provides personalized financial insights—all while keeping your data completely local.
 
-**Version 2.0 Features:**
+**Version 2.1 Features:**
+- ✅ Intelligent merchant categorization with confidence scoring
+- ✅ Transaction_Type field (INCOME/EXPENSE/TRANSFER/INTERNAL)
+- ✅ Automatic bank format detection
+- ✅ Reusable bank parsing templates (load once, reuse for all PDFs)
+- ✅ Context-aware verification with alternatives
+- ✅ Enhanced statement period tracking for overlap detection
+- ✅ Batch PDF processing (all files in one operation)
+- ✅ Filesystem-first file access (never use bash_tool on user filesystem)
+- ✅ Extraction-phase verification only (no analysis until month complete)
+- ✅ High-level output summaries (5-6 lines, no detailed metrics)
 - ✅ CSV-based workflow (no Excel dependencies)
-- ✅ Simplified setup with filesystem tools
-- ✅ Token-efficient processing
-- ✅ Flexible category system
-- ✅ Progressive monthly processing with duplicate detection
-- ✅ Default + override merchant categorization
+- ✅ Token-efficient document structure
 
 ---
 
 ## Table of Contents
 
-1. [Why This Exists](#why-this-exists)
-2. [Quick Start](#quick-start)
-3. [How It Works](#how-it-works)
-4. [System Requirements](#system-requirements)
-5. [Setup Instructions](#setup-instructions)
+1. [What's New in v2.1](#whats-new-in-v21)
+2. [Critical Processing Rules (v2.1 Updated)](#critical-processing-rules-v21-updated)
+3. [Why This Exists](#why-this-exists)
+4. [Quick Start](#quick-start)
+5. [How It Works](#how-it-works)
 6. [Monthly Workflow](#monthly-workflow)
-7. [File Structure](#file-structure)
-8. [Category Framework](#category-framework)
-9. [Usage Examples](#usage-examples)
-10. [Troubleshooting](#troubleshooting)
-11. [Privacy & Data Security](#privacy--data-security)
-12. [Customization](#customization)
-13. [Version History](#version-history)
+7. [Category Framework](#category-framework)
+8. [Intelligent Categorization (v2.1)](#intelligent-categorization-v21)
+9. [Transaction Types (v2.1)](#transaction-types-v21)
+10. [Setup Instructions](#setup-instructions)
+11. [Usage Examples](#usage-examples)
+12. [Troubleshooting](#troubleshooting)
+13. [Privacy & Data Security](#privacy--data-security)
+14. [Version History](#version-history)
+
+---
+
+## What's New in v2.1
+
+### Improvements (Original)
+- **Smart Categorization**: AI-powered suggestions with confidence scoring (High/Medium/Low). User confirms instead of entering from scratch
+- **Bank Format Detection**: Automatically identifies bank from PDF headers/filenames, loads appropriate parsing template
+- **Bank Parsing Templates**: Reusable regex patterns stored in `bank_parsing_templates.json`. No re-debugging each month
+- **Transaction Types**: New field distinguishes INCOME, EXPENSE, TRANSFER, INTERNAL. Better income vs. expense reporting
+- **Enhanced Verification**: Shows reasoning for category suggestions, alternative categories, and merchant search results
+- **Statement Period Tracking**: Captures full date range from statement, improves duplicate detection across overlapping cycles
+- **Confidence Metrics**: Verification shows confidence level so you know which suggestions need review
+- **Context Window**: Verification includes reasoning ("Dictionary match" vs. "Web search confirmation" vs. "Keyword pattern")
+
+### Critical Updates (v2.1 Updated - November 2025)
+- **Filesystem First Rule**: Always use Filesystem tools to list and discover files, batch copy with bash_tool Python, then extract. NEVER use bash_tool to read user filesystem directly.
+- **Process All Banks**: List directory first to find ALL PDFs, process EVERY bank file in month folder. Don't process only one bank when multiple exist.
+- **Extraction-Only Verification**: Create ONLY `verification_YYYY-MM.csv` during extraction phase. Defer monthly analysis and reports to AFTER month is complete and user verification is done.
+- **High-Level Output**: Chat summary limited to 5-6 lines showing banks processed, transaction counts, and next step. NO detailed tables, metrics, or analysis during extraction.
+
+### User Experience Impact
+- **80% less verification effort**: Pre-categorized transactions, user just confirms
+- **No re-debugging**: Bank parsing templates mean instant processing each month
+- **All banks in one run**: List directory first, process all banks automatically
+- **Better income reporting**: INCOME/EXPENSE type field makes financial analysis clearer
+- **Transparency**: See why each category was suggested, easily override with alternatives
+- **Batch PDF processing**: All PDFs copied at once, processed in single flow
+- **Concise output**: 5-line summary instead of detailed report (significant token savings)
+
+---
+
+## Critical Processing Rules (v2.1 Updated)
+
+### BEFORE You Start Processing a Month
+
+```
+□ Use Filesystem:list_directory() to find ALL PDFs in statements/YYYY-MM/
+□ Verify complete set (should have multiple PDFs from different sources)
+□ Load bank_parsing_templates.json ONCE before processing
+□ Batch copy ALL PDFs to container in single bash_tool operation
+```
+
+**WHY**: This ensures all bank data is processed together, no PDFs are missed, templates are loaded efficiently.
+
+### DURING Extraction Phase
+
+```
+□ Process EVERY PDF in the month (not just the first one)
+□ Auto-detect each bank format from filename/header
+□ Apply intelligent categorization with confidence scoring
+□ Detect transaction types (INCOME/EXPENSE/TRANSFER/INTERNAL)
+□ Generate ONLY verification_YYYY-MM.csv file
+□ Update processing_log.txt with extraction summary
+□ Keep chat summary to 5-6 lines (banks processed, totals, next step)
+```
+
+**WHY**: This ensures complete data capture, accurate categorization, and efficient token use.
+
+### AFTER User Returns Verified File
+
+```
+□ Read verified CSV
+□ Check for duplicates using Transaction_ID
+□ Append verified transactions to transactions_YYYY.csv
+□ Update merchant_dictionary.csv with new merchants
+□ NOW OKAY: Generate monthly_report_YYYY-MM.md with analysis
+□ Set Manual_Override=TRUE for user-corrected transactions
+□ Log completion to processing_log.txt
+```
+
+**WHY**: This phases analysis correctly, prevents duplicate processing, maintains audit trail.
+
+### NEVER (Anti-Patterns)
+
+```
+❌ Use bash_tool to read files from user filesystem directly
+❌ Extract PDF text before copying to container first
+❌ Process only one bank when multiple files exist
+❌ Create monthly README or detailed analysis during extraction phase
+❌ Show detailed output with tables and metrics in chat extraction summary
+❌ Use bash_tool to create/delete directories or CSV files
+❌ Reload bank_parsing_templates.json for each PDF
+❌ Extract from cover pages - use skip_pages from template
+```
+
+**WHY**: These anti-patterns cause missing data, confusing workflows, and excessive token use.
 
 ---
 
 ## Why This Exists
 
-Manual expense tracking is tedious. Mint and YNAB require linking your bank accounts. Spreadsheets are better but still time-consuming to maintain.
+Manual expense tracking is tedious. Many commercial solutions require linking your bank accounts. Spreadsheets are better but still time-consuming.
 
 **This system gives you:**
 - **Privacy**: Your financial data never leaves your computer
-- **Intelligence**: AI-powered merchant identification and categorization
+- **Intelligence**: AI-powered categorization with confidence scoring
+- **Efficiency**: Smart defaults reduce verification work by ~80%, processing time is minimal
 - **Persistence**: One-time categorization of merchants, reused forever
-- **Insights**: Spending analysis, trend detection, and personalized recommendations
+- **Insights**: Spending analysis, trend detection, personalized recommendations
 - **Simplicity**: Drop in PDFs, get analysis—no manual data entry
 - **Flexibility**: Customize categories, modify past categorizations, generate reports on demand
+- **Complete**: All banks processed automatically in one run
 
 All powered by Claude AI with your data stored locally in simple CSV files.
 
@@ -66,13 +162,17 @@ All powered by Claude AI with your data stored locally in simple CSV files.
    In project chat: `"Set up my financial advisor system"`
 
 5. **Add Your Statements**  
-   Download PDF statements → Add to `statements/YYYY-MM/` folders
+   Download PDF statements from ALL accounts → Add to `statements/YYYY-MM/` folders
 
-6. **Process First Month**  
-   In project chat: `"Process October 2025"`
+6. **Process Full Month**  
+   In project chat: `"Process [MONTH] [YEAR]"`
+   - Claude lists all PDFs in month folder
+   - Auto-detects each bank
+   - Extracts transactions from ALL banks in one run
+   - Generates verification file
 
 7. **Review & Verify**  
-   Open verification CSV in Excel → Correct any categorizations → Save as CSV → Type "verified"
+   Open verification CSV in Excel → Review suggested categories with confidence levels → Override if needed → Save as CSV → Type "verified"
 
 8. **Get Insights**  
    Ask questions: `"What are my top spending categories?"`
@@ -81,74 +181,241 @@ All powered by Claude AI with your data stored locally in simple CSV files.
 
 ## How It Works
 
-### The Three-Phase Process
+### The Three-Phase Process (v2.1 Enhanced)
 
-**Phase 1: Extraction**
-- Claude reads PDF bank statements from your filesystem
-- Extracts transactions (date, description, amount, account)
-- Checks against merchant dictionary for known merchants
-- Researches new merchants using web search
-- Generates verification file for your review
+**Phase 1: Full Month Extraction & Smart Categorization**
+- Claude lists all PDFs in `statements/YYYY-MM/` directory (finds ALL files)
+- Auto-detects bank format for EACH PDF
+- Uses reusable parsing templates for fast extraction (load once per session, reuse for all PDFs)
+- For each transaction from ALL banks:
+  - Checks merchant dictionary
+  - Applies intelligent categorization (keywords, fuzzy match, web search)
+  - Assigns confidence score (High/Medium/Low)
+  - Assigns Transaction_Type (INCOME/EXPENSE/TRANSFER/INTERNAL)
+- Generates verification file with smart defaults
+- Provides summary of banks processed and transaction counts
+- **STOPS HERE** - No analysis yet, verification file ONLY
 
-**Phase 2: Verification**
-- You review the verification CSV in Excel
-- Correct business names and categories as needed
-- Add notes for one-time overrides (e.g., "This Amazon purchase was running shoes")
-- Save as CSV and confirm
+**Phase 2: User Verification (Streamlined)**
+- You review verification CSV in Excel
+- Most transactions pre-categorized with HIGH confidence (just confirm)
+- MEDIUM confidence items show reasoning and alternatives
+- Only LOW confidence items need manual categorization
+- Add notes for one-time overrides
+- Save as CSV and confirm with "verified"
 
-**Phase 3: Analysis**
+**Phase 3: Analysis & Insights** (After verification is complete)
 - Claude updates master transaction file (with duplicate detection)
 - Updates merchant dictionary with new entries
-- Generates spending analysis and insights
+- Generates monthly report with spending analysis
+- Income vs. expense clearly separated
 - Provides personalized recommendations
 
-### Key Features
+### Key Features (v2.1 Updated)
 
-**Merchant Dictionary**: Once categorized, merchants are remembered forever. "SQ *PRET A MANG" becomes "Pret a Manger → Dining" and applies automatically to future statements.
+**Complete Coverage**: All banks processed in one run. List directory finds all source files - no PDFs missed.
 
-**Duplicate Detection**: Mid-month statement cycles? No problem. Claude automatically detects and skips duplicate transactions using composite Transaction IDs.
+**Smart Categorization**: Keywords, dictionary matching, fuzzy matching, and web search work together to suggest the right category with confidence level. HIGH confidence = pre-categorized, MEDIUM = user confirms, LOW = user decides.
 
-**Default + Override**: Dictionary stores default categories, but you can override specific transactions without changing the default (useful for multi-category merchants like Amazon).
+**Bank Format Detection**: System automatically identifies bank and loads appropriate parsing template. No manual bank selection needed.
 
-**Progressive Processing**: Process months one at a time or bulk process historical data—Claude handles both workflows.
+**Batch Processing**: All PDFs copied in one operation, all banks extracted in single flow. No re-debugging per PDF.
 
-**CSV-Based**: All data stored in simple CSV files you can open in Excel, analyze with Python, or back up anywhere.
+**Transaction Types**: INCOME (salary, interest), EXPENSE (spending), TRANSFER (ATM, account transfers), INTERNAL (savings movements). Makes income vs. expense reporting accurate.
+
+**Merchant Dictionary**: Once categorized, merchants are remembered forever with confidence levels.
+
+**Duplicate Detection**: Mid-month statement cycles handled automatically with composite Transaction IDs + statement period tracking.
+
+**Context-Aware Verification**: Shows *why* a category was suggested ("Dictionary match" vs. "Web search" vs. "Keyword pattern"), making overrides easy.
+
+**Efficient Output**: Summary output during extraction (significant token savings).
 
 ---
 
-## System Requirements
+## Monthly Workflow
 
-**Required:**
-- Claude Pro or higher subscription
-- Claude Desktop app (Mac or Windows)
-- PDF bank statements (not password-protected)
-- ~50MB disk space for typical year of transactions
+This is your repeating process for each month:
 
-**Recommended:**
-- Microsoft Excel or equivalent for verification (can use Google Sheets)
-- Multiple months of statements for trend analysis
-- Basic familiarity with file systems and folders
+### Step 1: Download All Statements (~5 minutes)
+1. Download PDF statements from ALL accounts
+2. Create folder: `statements/YYYY-MM/`
+3. Move ALL PDFs into folder
 
-**Not Required:**
-- Python installation (Claude handles all processing)
-- Bank account linking
-- Internet access for Claude (except for merchant research)
+### Step 2: Process Full Month (~3 minutes)
+```
+"Process [Month] [Year]"
+```
+
+Claude will:
+- List all PDFs in the month folder (shows you what's found)
+- Auto-detect bank formats for EACH PDF
+- Extract all transactions from ALL banks using parsing templates
+- Apply intelligent categorization with confidence scores
+- Generate verification file with suggested categories
+- Show summary of what was processed
+
+### Step 3: Verify & Categorize (~5-10 minutes, much faster than before!)
+1. Open `verification_YYYY-MM.csv` in Excel
+2. Review pre-categorized transactions
+3. HIGH confidence items (0.70+): Just confirm with ✓
+4. MEDIUM confidence items (0.40-0.69): Review reasoning, confirm or override
+5. LOW confidence items (<0.40): Manually categorize
+6. Add notes for special handling where needed
+7. Save as CSV (Excel will warn about format - click "Yes" to keep CSV)
+8. Return to Claude and type: `verified`
+
+### Step 4: Get Analysis (~1 minute) - Now Ready
+Once verified, Claude generates monthly report with:
+- Spending breakdown by category
+- Top merchants
+- Income vs. expense summary
+- Month-over-month comparison
+
+### Step 5: Get Insights (~1 minute each)
+Ask questions about your spending patterns and categories
+
+---
+
+## Category Framework
+
+### Spending Categories
+| Category | Includes | Examples |
+|----------|----------|----------|
+| **Home** | Rent, utilities, household items, furniture, home improvement | Rent, utility bill, furniture purchase, home insurance |
+| **Transportation** | Public transit, fuel, maintenance, rideshare, insurance | Rideshare, fuel, public transit, car maintenance |
+| **Travel** | Flights, hotels, vacation activities, travel insurance | Flight ticket, hotel booking, travel activities |
+| **Dining** | Solo restaurants, fast food, coffee, takeout, food delivery | Restaurant, coffee shop, food delivery, fast food |
+| **Going Out/Socialising** | Group dining, bars, clubs, concerts, social events | Group dining, venue, concert ticket, social event |
+| **Groceries** | Supermarket, food markets, meal prep ingredients | Supermarket, food market, meal prep |
+| **Clothing** | Casual wear, shoes, accessories, dry cleaning | Clothing store, shoes, jewelry, dry cleaning |
+| **Health & Fitness** | Gym, fitness apps, sports equipment, supplements | Gym membership, fitness class, sports equipment, supplements |
+| **Bills & Subscriptions** | Phone, internet, streaming, software, memberships | Phone bill, internet, software subscription, membership |
+| **Personal Care** | Haircuts, grooming, toiletries, dental, optical | Haircut, salon, dental, skincare products |
+| **Savings & Investments** | Savings transfers, investments, pension, ISA | Savings transfer, investment, pension contribution |
+| **Miscellaneous** | One-off purchases, gifts, donations, hobbies | Gift, donation, hobby supplies, one-off purchase |
+
+### Income Categories
+| Category | Includes |
+|----------|----------|
+| **Salary** | Employment income, bonuses, commissions |
+| **Refunds/Reimbursements** | Returned items, work reimbursements, insurance payouts, cashback |
+| **Other Income** | Freelance, side gigs, interest, dividends, gifts, tax refunds |
+
+---
+
+## Intelligent Categorization (v2.1)
+
+### How Smart Categorization Works
+
+The system uses multiple signals to suggest the right category:
+
+**1. Dictionary Matching (Confidence: 0.60)**
+- Known merchants always map to same category
+- Consistent categorization from merchant history
+- High accuracy for frequently seen merchants
+
+**2. Keyword Patterns (Confidence: 0.40)**
+- If description contains specific keywords → Category
+- Pattern-based detection for new merchants
+- Moderate confidence until verified
+
+**3. Fuzzy Merchant Matching (Confidence: 0.40)**
+- Partial name matching against known merchants
+- Handles slight variations in merchant names
+- Moderate confidence until confirmed
+
+**4. Web Search (Confidence: 0.70+)**
+- For unknown merchants, search online for context
+- Determines merchant type and location
+- High confidence when search confirms category
+
+### Confidence Levels
+
+| Level | Confidence | Meaning | Your Action |
+|-------|-----------|---------|-------------|
+| **HIGH** | 0.70+ | Very likely correct | Review and confirm |
+| **MEDIUM** | 0.40-0.69 | Probable, consider context | Review reasoning, confirm or override |
+| **LOW** | <0.40 | Uncertain, ambiguous | Manually categorize or skip |
+
+### Example Categorizations
+
+```
+Known Supermarket
+- Dictionary: YES → Always Groceries (0.60)
+- Keywords: "supermarket" pattern (0.40)
+- Result: HIGH confidence (0.70+) → Groceries ✓
+
+Restaurant Name
+- Dictionary: NO (new merchant)
+- Keywords: "restaurant" pattern (0.40)
+- Web search: Confirms restaurant (0.70)
+- Result: MEDIUM/HIGH confidence (0.65-0.75) → Dining ✓
+
+Vague Merchant Code
+- Dictionary: NO
+- Keywords: Generic text detected but not specific (0.20)
+- Location: Unclear
+- Result: LOW confidence (0.30) → Miscellaneous, needs review ⚠️
+
+Known Transit Provider
+- Dictionary: YES → Always Transportation (0.60)
+- Keywords: "transport" pattern (0.40)
+- Result: HIGH confidence (0.70+) → Transportation ✓
+
+Software Service
+- Dictionary: NO (new merchant)
+- Keywords: Suggests software (0.30)
+- Web search: Confirms software service (0.75)
+- Result: HIGH confidence (0.75+) → Bills & Subscriptions ✓
+```
+
+---
+
+## Transaction Types (v2.1)
+
+### What Are Transaction Types?
+
+Transaction_Type distinguishes different kinds of financial movements:
+
+| Type | Examples | How Detected |
+|------|----------|--------------|
+| **INCOME** | Salary, interest, gifts, refunds | Income-related keywords in description |
+| **EXPENSE** | Regular spending | Default for non-income transactions |
+| **TRANSFER** | ATM withdrawal, transfer to another account | Transfer-related keywords in description |
+| **INTERNAL** | Movement between own accounts | Internal transfer keywords detected |
+
+### Why It Matters
+
+**Better Reporting**:
+```
+Total Income: [Amount]
+Total Expenses: [Amount]
+Net Cash Flow: [Amount]
+
+Expenses by Category:
+- Home: [Amount] (EXPENSE only)
+- Groceries: [Amount] (EXPENSE only)
+- Dining: [Amount] (EXPENSE only)
+
+(ATM withdrawals and transfers excluded from "spending" analysis)
+```
+
+Without Transaction_Type, income and expenses would be mixed, making reporting confusing.
 
 ---
 
 ## Setup Instructions
 
 ### 1. Prepare Your Computer
-
 Create the base folder:
 ```
 ~/Documents/Coding/Claude/Financial Advisor/
 ```
 
-This is where all your financial data will live. You can choose a different location, but update the path in `PROJECT_INSTRUCTIONS.txt` accordingly.
+Subfolder structure will be created automatically during initialization.
 
 ### 2. Configure Claude Desktop
-
 1. Open Claude Desktop
 2. Click your profile icon → Settings
 3. Navigate to: Developer → Integrations
@@ -158,28 +425,20 @@ This is where all your financial data will live. You can choose a different loca
 7. Confirm permissions
 
 ### 3. Create Claude Project
-
 1. In Claude Desktop, click "New Project"
 2. Name it: "Financial Advisor"
 3. Click "Set custom instructions"
-4. Copy the entire contents of `PROJECT_INSTRUCTIONS.txt`
-5. **IMPORTANT**: Update line 5 with your actual username:
-   - Change: `/Users/jackpage/Documents/Coding/Claude/Financial Advisor/`
-   - To: `/Users/[YOUR_USERNAME]/Documents/Coding/Claude/Financial Advisor/`
+4. Copy entire contents of `PROJECT_INSTRUCTIONS.txt`
+5. **Update base path with your username** if needed
 6. Paste into custom instructions field
 7. Click "Add content" → Upload `FINANCIAL_ADVISOR.md` to Project Knowledge
 8. Save
 
 ### 4. Initialize System
-
-1. Start a new conversation in your Financial Advisor project
+1. Start conversation in Financial Advisor project
 2. Type: `"Set up my financial advisor system"`
-3. Claude will:
-   - Confirm your base path
-   - Create folder structure
-   - Initialize master CSV files
-   - Create processing log
-4. Verify folders exist in Finder:
+3. Claude will create all folders and master files
+4. Verify structure in Finder:
    ```
    Financial Advisor/
    ├── statements/
@@ -189,575 +448,267 @@ This is where all your financial data will live. You can choose a different loca
    └── logs/
    ```
 
-### 5. Add Bank Statements
-
-1. Download PDF statements from all your accounts (checking, credit cards, etc.)
-2. Navigate to `Financial Advisor/statements/` in Finder
-3. Create month folders using format: `YYYY-MM` (e.g., `2025-10` for October 2025)
-4. Move PDFs into appropriate month folders:
-   ```
-   statements/
-   ├── 2025-10/
-   │   ├── amex_october.pdf
-   │   ├── visa_october.pdf
-   │   └── checking_october.pdf
-   └── 2025-11/
-       └── amex_november.pdf
-   ```
-
-**Tips:**
-- You can process multiple accounts per month (Claude handles merging)
-- Rename PDFs to something recognizable (not required but helpful)
-- Statements should NOT be password-protected
-
----
-
-## Monthly Workflow
-
-This is your repeating process for each new month:
-
-### Step 1: Download Statements (~2 minutes)
-
-When your bank statements are available:
-1. Download PDFs from each account
-2. Create folder: `statements/YYYY-MM/`
-3. Move PDFs into folder
-
-### Step 2: Process Month (~5 minutes)
-
-In your Financial Advisor project:
-```
-"Process October 2025"
-```
-
-Claude will:
-- Extract all transactions from PDFs
-- Match against merchant dictionary
-- Research new merchants with web search
-- Generate verification CSV
-
-**⚠️ Claude will warn you to close files before proceeding—make sure master files are closed in Excel!**
-
-### Step 3: Verify Categorizations (~10-20 minutes first month, ~5 minutes after)
-
-1. Navigate to `monthly_reports/` folder
-2. Open `verification_YYYY-MM.csv` in Excel
-3. Review the categorizations:
-   - Focus on "Low" confidence items first
-   - Correct business names if needed (e.g., "SQ *COFFEE SH" → "Local Coffee Shop")
-   - Adjust categories as needed
-   - For multi-category merchants (Amazon, supermarkets), specify actual category
-   - Add notes for one-time overrides: "Amazon purchase was running shoes"
-4. Save file as CSV (Excel will warn—click "Yes" to keep CSV format)
-5. Return to Claude and type: `"verified"`
-
-**First month takes longer** because you're categorizing many merchants for the first time. Subsequent months are faster because merchants are remembered.
-
-### Step 4: Review Analysis (~5 minutes)
-
-Claude generates:
-- Spending summary by category
-- Top merchants
-- Month-over-month comparisons (after first month)
-- Insights and recommendations
-- Monthly report saved to `monthly_reports/`
-
-Ask follow-up questions:
-```
-"Show me my biggest spending increases this month"
-"What subscriptions do I have?"
-"Compare my dining spending to last month"
-```
-
-### Step 5: Done!
-
-Master files are updated automatically. Next month, repeat from Step 1.
-
----
-
-## File Structure
-
-```
-Financial Advisor/
-├── statements/                          # You add PDFs here
-│   ├── 2025-10/
-│   │   ├── amex_october.pdf
-│   │   ├── visa_october.pdf
-│   │   └── checking_october.pdf
-│   └── 2025-11/
-│       └── amex_november.pdf
-│
-├── master_files/                        # Claude maintains these
-│   ├── merchant_dictionary.csv          # Persistent merchant → category mappings
-│   ├── transactions_2025.csv            # All your transactions for the year
-│   └── categories.txt                   # Category definitions (editable)
-│
-├── monthly_reports/                     # Generated reports
-│   ├── verification_2025-10.csv         # For your review before finalizing
-│   ├── report_2025-10.md                # Analysis and insights
-│   └── verification_2025-11.csv
-│
-├── annual_reports/                      # Year-end summaries
-│   └── annual_report_2025.md
-│
-└── logs/                                # Audit trail
-    └── processing_log.txt               # Timestamped log of all operations
-```
-
-### Key Files Explained
-
-**merchant_dictionary.csv**: Your growing database of merchants
-```csv
-Raw_Statement_Text,Business_Name,Category,Last_Seen,Frequency
-"SQ *PRET A MANG","Pret a Manger","Dining","2025-10-15",12
-"AMZN MKTP","Amazon","Miscellaneous","2025-10-20",45
-```
-
-**transactions_2025.csv**: Complete transaction ledger
-```csv
-Transaction_ID,Date,Account_Source,Raw_Description,Business_Name,Category,Amount,Transaction_Type,Statement_Period,Calendar_Month,Manual_Override,Notes
-"2025-10-15_Amex_12.50_SQ_*PRET_A","2025-10-15","Amex","SQ *PRET A MANG LONDON","Pret a Manger","Dining",12.50,"Expense","2025-10","2025-10",FALSE,""
-```
-
-**categories.txt**: Category definitions (fully customizable)
-```
-SPENDING:
-Home
-Transportation
-Travel
-Dining
-Going Out/Socialising
-Groceries
-Clothing
-Health and Fitness
-Bills and Subscriptions
-Personal Care
-Savings and Investments
-Miscellaneous
-
-INCOME:
-Salary
-Refunds/Reimbursements
-Other Income
-```
-
----
-
-## Category Framework
-
-### Default Spending Categories
-
-**Home**: Rent, household items, furniture, utilities, home improvement, appliances, cleaning supplies, home insurance
-
-**Transportation**: Fuel, parking, car maintenance, public transport, car insurance, vehicle registration, tolls
-
-**Travel**: Flights, accommodation, vacation activities, travel insurance, luggage, foreign transaction fees during trips
-
-**Dining**: Restaurants (solo), fast food, takeout, food delivery apps, coffee shops when alone
-
-**Going Out/Socialising**: Restaurants with friends, bars, pubs, clubs, alcohol purchases, concert tickets, social events
-
-**Groceries**: Supermarket shopping, food markets, meal prep ingredients
-
-**Clothing**: Casual wear, shoes, accessories, dry cleaning, alterations
-
-**Health and Fitness**: Gym membership, race entries, fitness clothing/gear, running shoes, nutrition supplements, sports equipment, fitness apps
-
-**Bills and Subscriptions**: Phone, internet, streaming services, software subscriptions, memberships, cloud storage
-
-**Personal Care**: Haircuts, grooming products, toiletries, skincare, dental care, optical care, salon services
-
-**Savings and Investments**: Transfers to savings accounts, investment contributions, pension contributions, ISA deposits
-
-**Miscellaneous**: Everything else not fitting above categories, one-off purchases, gifts, charitable donations
-
-### Income Categories
-
-**Salary**: Regular employment income, bonuses, commissions
-
-**Refunds/Reimbursements**: Returned items, work expense reimbursements, insurance reimbursements, cashback, rewards
-
-**Other Income**: Freelance work, side gigs, interest, dividends, gifts received, tax refunds
-
-### Customizing Categories
-
-You can modify categories anytime:
-
-1. Edit `master_files/categories.txt` in any text editor
-2. Add, remove, or rename categories
-3. Save the file
-4. Tell Claude about the change: `"I've updated my categories"`
-5. Reclassify existing transactions if needed: `"Reclassify all 'Entertainment' as 'Going Out/Socialising'"`
+### 5. Add Bank Statements (ALL ACCOUNTS)
+1. Download PDF statements from ALL accounts
+2. Create month folder: `statements/YYYY-MM/`
+3. Move ALL PDFs for that month into the folder
+4. Claude auto-detects bank formats for each PDF
 
 ---
 
 ## Usage Examples
 
-### Analysis Queries
+### "Process [Month] [Year]"
+Claude will:
+- **List all PDFs** in `statements/YYYY-MM/` directory
+- **Auto-detect each bank**
+- **Load parsing templates** from `bank_parsing_templates.json` once
+- **Extract from ALL banks** in single flow
+- **Apply intelligent categorization** with confidence scores
+- **Generate verification_YYYY-MM.csv** ready for review
+- **Show summary**: Banks found, transaction counts, next step
 
+Example output:
 ```
-"What are my top spending categories?"
-"Show me all transactions over £100 this month"
-"Compare October to September"
-"What's my average monthly spending on groceries?"
-"Show me year-to-date totals by category"
-```
+✓ Extraction complete
 
-### Merchant Queries
+Banks processed:
+• Bank 1: [N] transactions
+• Bank 2: [N] transactions
+• Bank 3: [N] transactions
+• Bank 4: [N] transactions
 
-```
-"List all my subscriptions"
-"Show me all Amazon purchases this month"
-"What did I spend at Tesco in October?"
-"Find forgotten subscriptions" (recurring charges you might not use)
-```
+Total: [N] transactions | [Amount] | [Breakdown by type]
 
-### Trend Analysis
-
-```
-"Show me spending trends for the last 3 months"
-"Which categories increased the most this month?"
-"What are my biggest spending changes year-over-year?"
-"Visualize my monthly spending" (generates Python script for charts)
+✓ verification_YYYY-MM.csv ready for review
+Next: Open file, review categorizations, return "verified"
 ```
 
-### Budget & Planning
+### After You Verify: "I've reviewed and verified [Month]"
+Claude will:
+- Read your verified CSV
+- Update merchant dictionary with new entries
+- Append transactions to master file
+- Check for duplicates (handles overlapping statement cycles)
+- Generate monthly summary report
 
-```
-"Help me create a budget based on my spending"
-"What could I cut to save £200/month?"
-"Recommend areas where I could reduce spending"
-"Calculate my savings rate"
-```
+### "What are my top spending categories?"
+Claude will:
+- Load most recent month
+- Filter for EXPENSE type only (excludes transfers/income)
+- Aggregate by category
+- Show top categories with percentages and totals
 
-### Reporting
+### "Compare [Month 1] to [Month 2]"
+Claude will:
+- Load both months
+- Show category totals for each month
+- Highlight significant changes
+- Provide explanations for differences
 
-```
-"Generate my annual report for 2025"
-"Create a monthly summary for October"
-"Show me Q4 spending overview"
-"Export all transactions for tax purposes"
-```
+### "Show me my subscriptions"
+Claude will:
+- Filter category "Bills and Subscriptions"
+- Show all recurring charges
+- Flag services with low usage patterns
+- Suggest potential optimizations
 
-### Corrections & Updates
-
-```
-"Reclassify Amazon transactions in October as 'Health and Fitness'"
-"Change 'Local Coffee Shop' category from 'Dining' to 'Going Out/Socialising'"
-"Merge 'Transportation' and 'Travel' into one category"
-```
+### "Create a budget for [Month]"
+Claude will:
+- Calculate average spending by category
+- Suggest allocation based on historical patterns
+- Identify fixed vs. discretionary spending
+- Set up tracking for the month
 
 ---
 
 ## Troubleshooting
 
-### "Claude can't access my files"
+### "PDFs not extracting correctly"
+**Check**:
+1. Bank name in filename matches bank_parsing_templates.json
+2. PDF is not password-protected
+3. Parsing template for this bank exists
+4. Used Filesystem:list_directory() first to find PDF
+5. Batch copied PDF to container with bash_tool before extraction
 
-**Problem**: Claude says it can't find folders or files
+**Fix**: If new bank, add to bank_parsing_templates.json with regex pattern
 
-**Solution**:
-1. Check Settings → Developer → Integrations → Filesystem is ON
-2. Verify folder path matches exactly what's in `PROJECT_INSTRUCTIONS.txt`
-3. Try removing and re-adding the folder in Filesystem settings
-4. Restart Claude Desktop
+### "Only one bank extracted"
+**Cause**: Didn't check for all PDFs in directory first
 
-### "Folders created but not visible in Finder"
+**Fix**:
+1. Use Filesystem:list_directory() on statements/YYYY-MM/
+2. Verify all banks present in file listing
+3. Reprocess - Claude should auto-detect and extract all banks
 
-**Problem**: Claude says it created folders but you can't see them
+### "Transactions categorized wrong"
+**Review**: Verification CSV shows reasoning for each suggestion
+- "Dictionary match" = merchant known, should be accurate
+- "Keyword pattern" = word-based guess, may need override
+- "Web search" = looked up online, should be accurate
 
-**Cause**: Folders were created with bash_tool instead of Filesystem tools (incorrect project setup)
+Override in Excel verification file and save as CSV.
 
-**Solution**:
-1. In Claude project chat: `"Delete the Financial Advisor folder using bash_tool and recreate using Filesystem:create_directory"`
-2. Claude will remove the invisible folders and recreate properly
-3. Verify folders now appear in Finder
+### "Can't open CSV after Excel edit"
+**Fix**: 
+1. In Excel: File → Save As → CSV (not Excel format)
+2. Excel will warn about compatibility - click "Yes"
+3. Save, close, and use file
 
-### "PDF extraction failed"
+### "Duplicates appearing in transactions"
+**Cause**: Statement overlap between months
 
-**Problem**: Claude can't extract transactions from your statement
+**Solution**: Claude detects duplicates using Transaction_ID + Statement_Period. If still seeing duplicates:
+1. Check Transaction_ID generation (should match format)
+2. Verify statement period is captured correctly
+3. Check for duplicate entries in master file
 
-**Possible Causes**:
-- PDF is password-protected (remove password first)
-- PDF is an image scan, not searchable text (bank may have text version)
-- Uncommon bank format Claude hasn't seen before
+### "Can't see folders in Finder"
+**Cause**: Folders created with bash_tool instead of Filesystem tools
 
-**Solution**:
-1. Try re-downloading statement from bank
-2. Check if PDF text is selectable (if not, it's likely a scan)
-3. Provide Claude with a different month to "learn" your bank's format
-4. Last resort: Manual entry (rare, usually only for very unusual formats)
-
-### "Duplicate transactions appearing"
-
-**Problem**: Same transaction shows up multiple times
-
-**Cause**: Duplicate detection failed (usually due to statement overlap without consistent dates/amounts)
-
-**Solution**:
-1. During verification, flag duplicates in Notes column: "DUPLICATE"
-2. Tell Claude: `"Remove duplicates from October"`
-3. Claude will compare Transaction_IDs and remove extras
-4. Check future months process correctly
-
-### "Categorization seems wrong"
-
-**Problem**: Merchants being categorized incorrectly
-
-**Cause**: This is normal for new merchants! That's why verification exists.
-
-**Solution**:
-1. Correct in verification CSV before confirming
-2. Corrections update the merchant dictionary
-3. Future occurrences will use corrected category
-4. For one-time overrides, add note: "One-time purchase, don't update dictionary"
-
-### "CSV file won't open after editing in Excel"
-
-**Problem**: Edited verification file, now Claude can't read it
-
-**Cause**: Excel saved as .xlsx instead of .csv
-
-**Solution**:
-1. Open file in Excel
-2. File → Save As
-3. Format: CSV (Comma delimited) (*.csv)
-4. Save
-5. Confirm in Claude: `"verified"`
-
-### "Master files not updating"
-
-**Problem**: Verified transactions but master files unchanged
-
-**Solution**:
-1. Make sure files were closed before Claude tried updating
-2. Check `logs/processing_log.txt` for error messages
-3. Verify file permissions (should be read/write)
-4. Try re-running: `"Update master files with verified October data"`
+**Fix**: Delete with bash_tool, recreate with `"Set up my financial advisor system"`
 
 ---
 
 ## Privacy & Data Security
 
 ### What Stays Local
-
 **Everything financial**:
-- Your PDF statements (never uploaded to Claude)
+- Your PDF statements (never uploaded)
 - Transaction amounts and dates
-- Account numbers and balances
+- Account details
 - Merchant names and purchase details
 - All CSV files
 
 ### What Claude Sees (In Conversation Only)
-
-Claude processes your data in real-time during conversations but:
-- Data is not permanently stored by Claude/Anthropic
-- Each conversation is isolated (no cross-conversation data retention)
-- Financial details are never added to Claude's memory system
+Claude processes your data in real-time but:
+- Data is not permanently stored
+- Each conversation is isolated (no cross-conversation retention)
+- Financial details never added to memory
 - When conversation ends, transaction details are forgotten
 
-### What Claude Remembers (Non-Financial Only)
-
-Claude's memory system may store:
-- Your category preferences
-- Communication style preferences
-- General financial goals (if you share them)
-- Non-sensitive context about your situation
-
-**Never stored**: Specific transaction data, account numbers, balances, amounts, or merchant names
-
-### Web Search Privacy
-
-When Claude researches new merchants:
-- Only generic business names are searched (e.g., "Pret a Manger business")
-- No personal or financial data included in searches
-- Searches are for identification purposes only
-
 ### Best Practices
-
-1. **Don't sync to cloud** if you want maximum privacy (financial data stays only on your computer)
+1. **Don't sync to cloud** for maximum privacy
 2. **Do encrypt your disk** (FileVault on Mac, BitLocker on Windows)
-3. **Do use strong password** for your computer user account
-4. **Don't share statements** outside your Financial Advisor project
-5. **Do backup regularly** to encrypted external drive if desired
-
-### Comparison to Alternatives
-
-| Feature | This System | Mint/YNAB | Manual Spreadsheets |
-|---------|-------------|-----------|---------------------|
-| Data Location | Your computer only | Their servers | Your computer/cloud |
-| Bank Account Linking | No (PDF only) | Yes (full access) | No |
-| AI Analysis | Yes (local processing) | Limited | No |
-| Privacy Level | Highest | Lowest | High |
-| Setup Effort | Medium | Low | High |
-| Ongoing Effort | Low | Low | High |
-
----
-
-## Customization
-
-### Changing Categories
-
-Edit `master_files/categories.txt` in any text editor:
-
-```
-SPENDING:
-Home
-Transportation
-...your custom categories...
-Miscellaneous
-
-INCOME:
-Salary
-...your custom income types...
-```
-
-Save and tell Claude: `"I've updated my categories"`
-
-### Reclassifying Past Transactions
-
-```
-"Reclassify all 'Dining' transactions at Pret a Manger as 'Going Out/Socialising'"
-"Move all Amazon purchases from October to 'Health and Fitness'"
-```
-
-Claude will update both the specific transactions and the merchant dictionary.
-
-### Custom Analysis
-
-Request specific reports:
-```
-"Create a custom report showing weekday vs. weekend spending"
-"Analyze my spending patterns by day of month"
-"Show me purchases only between £20-£50"
-"Generate a Python script to visualize my top 10 merchants"
-```
-
-### Budget Tracking
-
-Set up budget monitoring:
-```
-"Set up budget tracking: £400 for groceries, £300 for dining"
-"Alert me if I exceed budget in any category"
-"Show me progress against my budget"
-```
-
-Claude will track against your budgets in future analyses.
-
-### Multiple Years
-
-System automatically handles year transitions:
-- Keeps separate `transactions_YYYY.csv` for each year
-- Maintains single `merchant_dictionary.csv` across years
-- Can analyze cross-year trends: `"Compare 2025 to 2024"`
+3. **Do use strong password** for user account
+4. **Do backup regularly** to encrypted external drive
 
 ---
 
 ## Version History
 
-### Version 2.0 (November 2025) - CSV Simplification
+### Version 2.1 Updated (November 2025) - Critical Workflow Fixes
 
-**Major Changes**:
-- ✅ Switched from Excel (.xlsx) to CSV files for all data storage
-- ✅ Eliminated need for Python scripts for basic operations
-- ✅ Streamlined workflow using Filesystem tools exclusively
-- ✅ Improved token efficiency in processing
-- ✅ Added flexible category system with `categories.txt`
-- ✅ Implemented default + override merchant categorization
-- ✅ Simplified verification workflow (direct Excel editing of CSV)
-- ✅ Enhanced duplicate detection with composite Transaction_ID
+**Critical Fixes**:
+- ✅ Filesystem first rule: Always use Filesystem tools to discover files, batch copy with bash_tool, then extract
+- ✅ Process all banks: List directory first, process EVERY PDF
+- ✅ Extraction-only verification: Create verification file ONLY during extraction, defer analysis
+- ✅ High-level output: Chat summary limited to 5-6 lines (significant token savings)
 
-**Files Removed**:
-- `create_master_files.py` (no longer needed)
-- `SETUP_INSTRUCTIONS.txt` (consolidated into README)
-- `QUICKSTART.md` (consolidated into README)
-- `SETUP_CHECKLIST.md` (consolidated into README)
-- `UPDATE_SUMMARY.md` (consolidated into README)
-- `PERMISSION_FIX.md` (consolidated into README)
+**User Impact**:
+- No more missed banks or incomplete processing
+- Cleaner workflow with clear phases
+- Efficient chat output
+- Consistent extraction methodology
 
 **Files Updated**:
-- `PROJECT_INSTRUCTIONS.txt` - Complete rewrite for CSV workflow
-- `FINANCIAL_ADVISOR.md` - Comprehensive methodology update
-- `README.md` - Streamlined single-source documentation
+- `PROJECT_INSTRUCTIONS.txt` - Critical rules and phases
+- `FINANCIAL_ADVISOR.md` - Pre-extraction steps and output format
+- `v2.1_IMPLEMENTATION_GUIDE.md` - Code examples and common mistakes
+- `README.md` - This file with integrated updates
 
-**Breaking Changes**:
-- Existing .xlsx files need conversion to CSV (one-time migration)
-- Project instructions must be updated in existing projects
+### Version 2.1 (October 2025) - Smart Categorization & Auto-Detection
 
-**Migration from v1.0**:
-If you used the Excel-based version:
-1. Export your .xlsx files to CSV format in Excel
-2. Update project instructions with new `PROJECT_INSTRUCTIONS.txt`
-3. Replace `FINANCIAL_ADVISOR.md` in project knowledge
-4. Continue using system normally
+**Major Features**:
+- ✅ Intelligent categorization with confidence scoring
+- ✅ Automatic bank format detection
+- ✅ Reusable bank parsing templates
+- ✅ Transaction_Type field (INCOME/EXPENSE/TRANSFER/INTERNAL)
+- ✅ Enhanced verification with reasoning
+- ✅ Statement period tracking for overlap detection
+- ✅ Context-aware category suggestions
+- ✅ Token-efficient documentation
 
-### Version 1.0 (October 2025) - Initial Release
+**User Impact**:
+- Significantly faster verification (pre-categorized transactions)
+- No re-debugging each month (parsing templates)
+- Better income vs. expense reporting
+- Transparent categorization (shows reasoning)
+
+### Version 2.0 (September 2025) - CSV Simplification
 
 **Features**:
-- Excel-based storage (.xlsx files)
-- Python script for file creation
+- CSV-based workflow
+- Filesystem tools for file operations
+- Flexible category system
+- Default + override merchant categorization
+- Simplified verification workflow
+- Enhanced duplicate detection
+
+### Version 1.0 (Initial Release)
+
+**Features**:
+- Excel-based storage
 - Basic merchant dictionary
 - Monthly processing workflow
 - Web search for merchant identification
-- Verification workflow
-- Analysis and recommendations
 
 ---
 
 ## FAQ
 
-**Q: Can I use this with Google Sheets instead of Excel?**
-A: Yes! CSV files open in Google Sheets. Just download, edit, and upload back as CSV.
+**Q: Can I use Google Sheets instead of Excel?**
+A: Yes! CSV files open in Google Sheets. Download, edit, upload back as CSV.
 
-**Q: What if my bank doesn't provide PDF statements?**
-A: Most banks offer PDF downloads. If yours doesn't, you can print to PDF from online banking. Last resort: Manual CSV entry (tedious but possible).
+**Q: What if my bank isn't supported?**
+A: Most banks can be added. Add parsing pattern to `bank_parsing_templates.json` with date/amount regex patterns.
 
-**Q: Can I process multiple accounts at once?**
-A: Yes! Put all PDFs for a month in the same `YYYY-MM` folder. Claude will process all and merge transactions.
+**Q: How accurate is categorization?**
+A: Very accurate for common merchants (HIGH confidence 0.70+). Unusual merchants may be MEDIUM confidence and need review. That's why the verification step exists.
 
-**Q: What about joint accounts or shared expenses?**
-A: System treats all transactions as "yours." For shared expenses, consider either: (1) Process only your portion, or (2) Add notes to track which are shared.
+**Q: Can I process multiple months at once?**
+A: Process one at a time (oldest first) to prevent categorization errors. Each month takes approximately 10-15 minutes.
 
-**Q: How accurate is the merchant identification?**
-A: Very accurate for common merchants. Unusual or local businesses may need manual verification (hence the verification step).
+**Q: What if I have significant historical data?**
+A: Process chronologically, one month at a time. First few months slower (building merchant dictionary). After that, very fast.
 
-**Q: Can I use this for business expenses?**
-A: Yes, but you'd want to customize categories for business purposes (add: "Client Entertainment", "Office Supplies", "Business Travel", etc.).
+**Q: Can I reclassify past transactions?**
+A: Yes! Edit the CSV file directly or ask Claude to reclassify groups of transactions.
 
-**Q: What if I have 2 years of historical statements?**
-A: Process chronologically, one month at a time. First few months take longer (building merchant dictionary). After that, very fast.
+**Q: Is this better than commercial alternatives?**
+A: Different trade-offs. This gives complete privacy + AI insights but requires PDF downloads. Commercial alternatives auto-sync but require account linking.
 
-**Q: Is this better than YNAB/Mint?**
-A: Different trade-offs. This gives you complete privacy and AI-powered insights but requires PDF downloads. YNAB/Mint auto-sync but require bank account linking.
+**Q: Why should I download ALL statements instead of just one?**
+A: To get complete financial picture in one run. Processing all accounts together is faster and more efficient than separate processing sessions.
 
-**Q: Can I share this with family/friends?**
-A: Absolutely! Share these documentation files. Each person needs their own Claude Pro subscription and separate folder structure.
-
-**Q: What happens if I forget to process a month?**
-A: No problem! Process it anytime. Just add the PDFs to the correct `YYYY-MM` folder and tell Claude: `"Process [Month Year]"`
-
-**Q: Can I delete old transactions?**
-A: Yes, edit the CSV files directly. But keep them for year-end reports and trends. Consider archiving instead of deleting.
+**Q: What if my PDF extracts no transactions?**
+A: First, verify Filesystem:list_directory found the PDF. Then check if it matches a bank_parsing_templates.json pattern. If new bank, add pattern with regex example from statement.
 
 ---
 
 ## Conclusion
 
-You now have a powerful, private, AI-driven financial analysis system. Your data stays local, merchants are categorized once and remembered forever, and you get insights that used to require expensive financial advisors.
+You now have a powerful, private, AI-driven financial analysis system. Your data stays local, all your bank accounts are processed together, merchants are categorized with confidence scores, and you get insights that used to require expensive financial advisors.
 
 **Next Steps**:
-1. Complete setup (if you haven't already)
-2. Process your first month
-3. Explore analysis capabilities
-4. Set up monthly routine
-5. Enjoy financial clarity!
+1. Complete setup
+2. Download statements from ALL accounts for first month
+3. Process full month (Claude auto-detects and extracts all banks)
+4. Review and confirm categories (fast!)
+5. Get insights
+6. Set up monthly routine
 
-**Questions or Issues?**
-- Check Troubleshooting section
-- Ask Claude in your project: `"I'm having trouble with..."`
-- Review `PROJECT_INSTRUCTIONS.txt` and `FINANCIAL_ADVISOR.md` for detailed methodology
+**Remember**: This system provides tools for understanding your spending, but consult qualified professionals for personalized financial planning.
+
+**Take control of your finances. One smart categorization at a time.** 💰
 
 ---
 
-**Remember**: I'm an AI assistant, not a licensed financial advisor. This system provides tools for understanding your spending, but always consult qualified professionals for personalized financial planning advice.
+## Documentation Files
 
-**Take control of your finances. One PDF at a time.** 💰
+For more details, see:
+- `PROJECT_INSTRUCTIONS.txt` - Rules, phases, and implementation rules
+- `FINANCIAL_ADVISOR.md` - Methodology and technical details
+- `v2.1_IMPLEMENTATION_GUIDE.md` - Code examples and common mistakes
+- `bank_parsing_templates.json` - Bank-specific parsing patterns
